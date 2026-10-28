@@ -1,0 +1,118 @@
+@page "/guide"
+
+<PageTitle>C01 · Student guide</PageTitle>
+
+<PageHeader Eyebrow="LESSON C01 / STUDENT GUIDE" Title="Understand the concepts." Accent="Then run the lab."
+            Intro="Explore the learning goals and follow the setup instructions. Use the navigation buttons to switch between the guide and the application." />
+
+<section id="learning" class="student-section" aria-labelledby="learning-title">
+    <div class="student-heading">
+        <p class="eyebrow">YOUR LEARNING GOALS</p>
+        <h2 id="learning-title">What you will learn</h2>
+        <p>Run a real agent conversation and explain what your application controls at each step.</p>
+    </div>
+    <div class="learning-grid">
+        <article class="learning-card">
+            <span class="concept-number">01</span>
+            <h3>Agent, environment, and session</h3>
+            <p>Identify the agent configuration, the environment it uses, and the session that holds your conversation. Create a session and save its ID.</p>
+        </article>
+        <article class="learning-card">
+            <span class="concept-number">02</span>
+            <h3>The application and agent loop</h3>
+            <p>Send a task from the Blazor page through the ASP.NET Core host to the managed agent. Understand why the API key and the Anthropic SDK stay on the server.</p>
+        </article>
+        <article class="learning-card">
+            <span class="concept-number">03</span>
+            <h3>Live events and conversation history</h3>
+            <p>Follow messages and lifecycle events in the activity feed. Reconnect with a session ID and see how the host combines history with live events.</p>
+        </article>
+        <article class="learning-card">
+            <span class="concept-number">04</span>
+            <h3>Session state and stop reasons</h3>
+            <p>Distinguish a finished turn, a pending action, and a budget pause. Inspect the returned state instead of treating every idle event as success.</p>
+        </article>
+        <article class="learning-card">
+            <span class="concept-number">05</span>
+            <h3>Human decisions and tool results</h3>
+            <p>With a suitably configured agent, match a pending event to Allow, Deny, or a custom tool result. Explain why approval and supplying a result are different.</p>
+        </article>
+        <article class="learning-card">
+            <span class="concept-number">06</span>
+            <h3>Interrupt and verify remote work</h3>
+            <p>Request an interruption, then inspect the remote session. Learn why closing a browser does not stop agent work and why claimed artifacts need checking.</p>
+        </article>
+    </div>
+    <p class="learning-outcome"><strong>By the end:</strong> you can create, observe, reconnect to, and inspect a managed agent session, and explain when the host must make a decision.</p>
+</section>
+<div class="guide-pager"><a href="/guide#run-guide">Next: how to run the application <span aria-hidden="true">→</span></a></div>
+<section id="run-guide" class="student-section run-guide" aria-labelledby="run-guide-title">
+    <div class="student-heading">
+        <p class="eyebrow">FROM SETUP TO YOUR FIRST CONVERSATION</p>
+        <h2 id="run-guide-title">How to run this application</h2>
+        <p>Follow these steps in order. Use PowerShell for the commands and keep the server terminal open while you use the app.</p>
+    </div>
+    <ol class="run-steps">
+        <li>
+            <div class="step-content">
+                <h3>Open the C01 C# application folder</h3>
+                <p>Install the <strong>.NET 10 SDK</strong>. Check it with <code>dotnet --list-sdks</code>; one line must start with <code>10.</code>. From the <strong>presentations</strong> folder, open the app directory:</p>
+                <pre><code class="language-powershell">cd .\lesson-c01\lesson-c01-csharp-app</code></pre>
+                <p class="step-note">This is the folder containing <code>SessionLab.slnx</code>. Every command in this guide runs from here.</p>
+            </div>
+        </li>
+        <li>
+            <div class="step-content">
+                <h3>Restore and build</h3>
+                <pre><code class="language-powershell">dotnet build</code></pre>
+                <p>The first build downloads the <code>Anthropic</code> 13.3.0 NuGet package and compiles the app. The folder's <code>nuget.config</code> restores only from nuget.org.</p>
+            </div>
+        </li>
+        <li>
+            <div class="step-content">
+                <h3>Store your configuration as user secrets</h3>
+                <p>.NET user secrets live in your user profile, outside the project folder, so they cannot be committed by accident. Set your workspace API key and resource IDs:</p>
+                <pre><code class="language-powershell">dotnet user-secrets set ANTHROPIC_API_KEY your_api_key --project src/SessionLab
+dotnet user-secrets set CLAUDE_MANAGED_AGENT_ID your_agent_id --project src/SessionLab
+dotnet user-secrets set CLAUDE_MANAGED_ENVIRONMENT_ID your_environment_id --project src/SessionLab</code></pre>
+                <p>Replace the placeholders with your real values. Check what is stored with <code>dotnet user-secrets list --project src/SessionLab</code>. Your Anthropic workspace must have Managed Agents access. Environment variables with the same names also work and take precedence. Restart the server after changing a value.</p>
+                <details class="resource-help">
+                    <summary>Need an agent ID or environment ID?</summary>
+                    <p>After setting your API key, create only the resources you are missing:</p>
+                    <pre><code class="language-powershell">dotnet run --project src/SessionLab -- create-agent
+dotnet run --project src/SessionLab -- create-environment</code></pre>
+                    <p>Each command prints an ID and the <code>dotnet user-secrets set</code> command that stores it. Each run creates a new remote resource, so save and reuse the IDs.</p>
+                </details>
+            </div>
+        </li>
+        <li>
+            <div class="step-content">
+                <h3>Start the server and open the page</h3>
+                <pre><code class="language-powershell">dotnet run --project src/SessionLab</code></pre>
+                <p>When the terminal prints <code>Now listening on: http://127.0.0.1:3000</code>, the app is ready. Open <a href="http://127.0.0.1:3000">http://127.0.0.1:3000</a> in your browser. To use another port, add <code>--urls http://127.0.0.1:3001</code> to the command.</p>
+                <p class="step-note">The terminal stays busy because it is serving the page. You can now use the application.</p>
+            </div>
+        </li>
+        <li>
+            <div class="step-content">
+                <h3>Create a session and send your first message</h3>
+                <p><a href="/#session-lab">Open the session lab</a>, click <strong>New session</strong>, and wait for the connection. Enter this example in <strong>Your message</strong>:</p>
+                <blockquote>Explain what an agent session is in one sentence.</blockquote>
+                <p>Click <strong>Send message</strong>. Watch the activity feed and save the returned session ID. New sessions use a 50¢ list-cost budget; provider usage can incur charges and in-flight work can exceed the cap.</p>
+            </div>
+        </li>
+        <li>
+            <div class="step-content">
+                <h3>Inspect the outcome, reconnect, and stop deliberately</h3>
+                <p>Use <strong>Inspect session</strong> and read the stop reason. <code>end_turn</code> means the turn finished; <code>requires_action</code> means the host must respond; <code>budget_reached</code> means work is paused by the budget.</p>
+                <p>To reconnect, enter the saved session ID and click <strong>Connect</strong>. When you return from this guide in the same browser tab, the app fills in your previous session ID automatically; click <strong>Connect</strong> to resume viewing its events.</p>
+                <p>To request a stop, click <strong>Interrupt work</strong> and confirm the session is idle. Press <strong>Ctrl+C</strong> in the terminal when you want to stop the local server; this alone does not stop remote work.</p>
+            </div>
+        </li>
+    </ol>
+    <div class="guide-next">
+        <p><strong>Optional next exercise:</strong> the standard agent may never request a pending action. The app's README explains how to create the separate pending-action demo agent with <code>dotnet run --project src/SessionLab -- create-pending-demo-agent</code> and try both approval and custom-result flows.</p>
+        <a href="/#session-lab" class="guide-start">Go to the session lab <span aria-hidden="true">↗</span></a>
+    </div>
+</section>
+<StudentNav Footer />

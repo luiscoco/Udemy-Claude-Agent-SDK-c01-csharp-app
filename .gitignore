@@ -1,0 +1,18 @@
+# Build output
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+
+# Credentials and local settings. Secrets belong in dotnet user-secrets, not in this folder.
+.env*
+appsettings.*.local.json
+*.pem
+*.key
+
+# Local script artifacts
+__pycache__/
+*.py[cod]
+*.log
+.DS_Store

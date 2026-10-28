@@ -1,0 +1,13 @@
+<nav class="student-nav @CssClass" aria-label="@Label">
+    <a href="/guide#learning">@(Footer ? "Back to learning goals" : "What you will learn")</a>
+    <a href="/guide#run-guide">@(Footer ? "Back to run instructions" : "How to run the application")</a>
+    <a href="/architecture">Architecture &amp; workflow</a>
+    <a href="/#session-lab" class="lab-link">@(Footer ? "Return to the session lab" : "Session lab") <span aria-hidden="true">↗</span></a>
+</nav>
+
+@code {
+    [Parameter] public bool Footer { get; set; }
+
+    string CssClass => Footer ? "guide-footer" : "";
+    string Label => Footer ? "Continue learning" : "Lesson sections";
+}

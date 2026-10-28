@@ -1,0 +1,134 @@
+@page "/architecture"
+@using SessionLab.Components.Docs
+
+<PageTitle>C01 · Architecture &amp; workflow</PageTitle>
+
+<PageHeader Eyebrow="LESSON C01 / ARCHITECTURE & WORKFLOW" Title="Follow every request." Accent="Understand every step."
+            Intro="Trace a conversation from the student to the remote session and back. This UML sequence diagram follows the actual C# / Blazor implementation." />
+
+<section id="prerequisites" class="student-section" aria-labelledby="prerequisites-title">
+    <div class="student-heading">
+        <p class="eyebrow">STEP 0 / PREPARE YOUR WORKSPACE</p>
+        <h2 id="prerequisites-title">Before the workflow: prepare an agent and environment</h2>
+        <p>A session needs both an agent ID and an environment ID. After building the app and storing the API key in step 1, reuse suitable existing resource IDs and skip steps 2–3. Create only the resources you are missing; each creation command makes a new remote resource.</p>
+    </div>
+    <p class="learning-outcome"><strong>Setup → conversation:</strong> store the API key → create or reuse an agent → create or reuse an environment → save both IDs → start the app → create a session.</p>
+    <ol id="prerequisite-steps" class="run-steps">
+        <li><div class="step-content">
+            <h3>Build the app and store the API key</h3>
+            <p>Open PowerShell in <code>lesson-c01/lesson-c01-csharp-app</code>, the folder containing <code>SessionLab.slnx</code>. Build once, then store your key as a .NET user secret:</p>
+            <pre><code class="language-powershell">dotnet build
+dotnet user-secrets set ANTHROPIC_API_KEY your_api_key --project src/SessionLab</code></pre>
+            <p>Use your real key; the workspace must have Managed Agents access. The same configuration feeds both the web app and the setup commands, which check for a missing key before creating resources.</p>
+            <CodeExample Snippet="Snippets.SetupDispatch" />
+            <CodeExample Snippet="Snippets.SetupKeyCheck" />
+        </div></li>
+        <li><div class="step-content">
+            <h3>Create the agent configuration</h3>
+            <pre><code class="language-powershell">dotnet run --project src/SessionLab -- create-agent</code></pre>
+            <p>This runs <code>CreateAgentAsync</code> in <code>Setup/SetupCommands.cs</code>. The agent configuration defines the model, instructions, and available tools; it is not a conversation. The command prints <code>CLAUDE_MANAGED_AGENT_ID=...</code>. Save that returned ID.</p>
+            <p>The model shown below is the command's configured choice. If your workspace rejects it, select a model supported by that workspace before retrying.</p>
+            <CodeExample Snippet="Snippets.CreateAgent" />
+        </div></li>
+        <li><div class="step-content">
+            <h3>Create the environment configuration</h3>
+            <pre><code class="language-powershell">dotnet run --project src/SessionLab -- create-environment</code></pre>
+            <p>This runs <code>CreateEnvironmentAsync</code>. It creates a reusable cloud environment configuration with limited networking and package-manager access enabled. The command prints <code>CLAUDE_MANAGED_ENVIRONMENT_ID=...</code>. Save that returned ID.</p>
+            <p>This setup request creates a configuration; it does not create the conversation or demonstrate a command running in a session workspace.</p>
+            <CodeExample Snippet="Snippets.CreateEnvironment" />
+        </div></li>
+        <li><div class="step-content">
+            <h3>Save both IDs, then start the application</h3>
+            <p>Store the printed IDs next to your API key. Replace the example values with your own:</p>
+            <pre><code class="language-powershell">dotnet user-secrets set CLAUDE_MANAGED_AGENT_ID your_agent_id --project src/SessionLab
+dotnet user-secrets set CLAUDE_MANAGED_ENVIRONMENT_ID your_environment_id --project src/SessionLab
+dotnet run --project src/SessionLab</code></pre>
+            <p>If the server was already running, stop it with <strong>Ctrl+C</strong> and start it again to reload the configuration. Open <code>http://127.0.0.1:3000</code> and click <strong>New session</strong>. The runtime workflow below now uses the saved agent and environment IDs.</p>
+            <CodeExample Snippet="Snippets.ClientRegistration" />
+            <p class="step-note"><strong>For the optional pending-action exercise:</strong> <code>dotnet run --project src/SessionLab -- create-pending-demo-agent</code> creates a separate agent with a custom tool and confirmation policy. Note your original agent ID before replacing it; reuse the environment ID and restart the server. This extra agent is not required for an ordinary conversation.</p>
+        </div></li>
+    </ol>
+    <div class="student-nav" aria-label="Setup next steps">
+        <a href="/architecture#architecture-title">Next: follow the UML sequence ↓</a>
+        <a href="/architecture#walkthrough">Go to the runtime code walkthrough ↓</a>
+    </div>
+</section>
+<section class="student-section" aria-labelledby="architecture-title">
+    <div class="student-heading">
+        <p class="eyebrow">THE BIG PICTURE</p>
+        <h2 id="architecture-title">Create a session and observe its first turn</h2>
+        <p>Each column is a participant. Read the numbered arrows from top to bottom. Home.razor, SessionHub, and the Anthropic SDK all run inside the ASP.NET Core host; the browser only displays what the Blazor circuit renders, and Managed Agents is the remote service.</p>
+    </div>
+    <figure class="uml-figure">
+        <div class="diagram-scroll" tabindex="0" role="region" aria-label="Scrollable UML sequence infographic" aria-describedby="diagram-caption">
+            <img class="uml-image" src="architecture.svg" width="1560" height="1880" alt="UML sequence: student, browser, Home.razor in the Blazor circuit, SessionHub, Anthropic SDK, and Managed Agents exchange 25 messages to create, observe, and prompt a session. The numbered walkthrough below explains each group of messages." />
+        </div>
+        <figcaption id="diagram-caption">Solid arrows show requests, dashed arrows show returned data, and open arrows show event notifications. On a narrow screen, scroll the diagram sideways to keep the text large.</figcaption>
+    </figure>
+    <div class="student-nav diagram-links" aria-label="Diagram files">
+        <a href="architecture.svg" target="_blank" rel="noopener">Open full-size diagram ↗</a>
+        <a href="architecture.svg" download="C01-CSharp-UML-Architecture.svg">Download SVG</a>
+        <a href="architecture.png" download="C01-CSharp-UML-Architecture.png">Download PNG</a>
+    </div>
+</section>
+<section id="walkthrough" class="student-section" aria-labelledby="walkthrough-title">
+    <div class="student-heading">
+        <p class="eyebrow">CONNECT THE DIAGRAM TO THE CODE</p>
+        <h2 id="walkthrough-title">Walk through the application step by step</h2>
+    </div>
+    <ol class="run-steps">
+        <li><div class="step-content"><h3>Create the remote session · arrows 1–7</h3>
+            <p>The student clicks <strong>New session</strong>. Blazor sends the click over its SignalR connection, and the <code>CreateAsync</code> handler in <code>Home.razor</code> runs <strong>on the server</strong>. It calls <code>SessionHub.CreateSessionAsync</code>, which calls <code>client.Beta.Sessions.Create</code> with the configured agent ID, environment ID, and a 50¢ list-cost budget. The SDK returns the created session and its ID.</p>
+            <CodeExample Snippet="Snippets.HomeCreate" />
+            <CodeExample Snippet="Snippets.HubCreate" />
+        </div></li>
+        <li><div class="step-content"><h3>Prepare observation · arrows 8–12</h3>
+            <p>The hub calls <code>AttachAsync(id)</code>. It opens the event stream <strong>before</strong> reading <code>Events.List(id)</code>, so live delivery is buffered while history is paged in. The hub keeps events in a <code>SessionFeed</code> in memory and deduplicates records with IDs. This event buffer is not a durable database.</p>
+            <CodeExample Snippet="Snippets.OpenStreamThenHistory" />
+            <CodeExample Snippet="Snippets.FeedEmit" />
+        </div></li>
+        <li><div class="step-content"><h3>Connect the page to the feed · arrows 13–16</h3>
+            <p>After preparing the host reader, the hub returns the session ID. <code>Home.razor</code> then subscribes to the feed: it receives the buffered events and registers <code>OnEvent</code> for new ones. There is no browser <code>EventSource</code> and no <code>/api</code> endpoint: the component lives on the server, and Blazor sends each UI change to the browser as a render diff over SignalR. That SignalR connection is separate from the provider stream opened in step 2.</p>
+            <CodeExample Snippet="Snippets.AttachOrReport" />
+            <CodeExample Snippet="Snippets.ConnectSubscribe" />
+            <CodeExample Snippet="Snippets.FeedSubscribe" />
+        </div></li>
+        <li><div class="step-content"><h3>Send a prompt · arrows 17–21</h3>
+            <p>The student enters a prompt and clicks <strong>Send message</strong>. The form's submit handler runs on the server, validates the text, and calls <code>SendMessageAsync</code>. The hub ensures a reader exists with <code>AttachAsync(id)</code> and sends a <code>user.message</code> through <code>Events.Send</code>. The API key remains on the host.</p>
+            <CodeExample Snippet="Snippets.HomeSend" />
+            <CodeExample Snippet="Snippets.HubSend" />
+        </div></li>
+        <li><div class="step-content"><h3>Observe the response · arrows 22–25</h3>
+            <p>The remote session emits agent and lifecycle events. The SDK delivers them to the hub's background task, which emits them into the feed. Each subscribed component marshals the event onto its renderer, updates the activity feed and session state, and Blazor pushes the change to the browser. An idle event's stop reason may be <code>end_turn</code>, <code>requires_action</code>, or <code>budget_reached</code>; these represent different outcomes.</p>
+            <CodeExample Snippet="Snippets.LiveLoop" />
+            <CodeExample Snippet="Snippets.OnEvent" />
+            <CodeExample Snippet="Snippets.RenderText" />
+            <CodeExample Snippet="Snippets.ReadIdle" />
+        </div></li>
+        <li><div class="step-content"><h3>Keep the session ID and reconnect</h3>
+            <p>A completed turn does not create a new conversation or automatically archive the session. On returning from this page in the same tab, the lab restores the last session ID. Click <strong>Connect</strong> to subscribe the page again. The hub reuses its reader if one remains; otherwise, it opens the provider stream and loads history again.</p>
+            <CodeExample Snippet="Snippets.RememberSession" />
+            <CodeExample Snippet="Snippets.RestoreSession" />
+            <CodeExample Snippet="Snippets.ConnectButton" />
+            <CodeExample Snippet="Snippets.ReuseReader" />
+        </div></li>
+    </ol>
+</section>
+<section class="student-section" aria-labelledby="optional-title">
+    <div class="student-heading"><p class="eyebrow">OPTIONAL BRANCHES</p><h2 id="optional-title">When the normal turn needs a host decision</h2></div>
+    <div class="architecture-branches with-code">
+        <article class="learning-card"><h3>Pending tool action</h3>
+            <p>With a suitably configured agent, inspect the event ID and input. The chosen button runs <code>ActionAsync</code> on the server. The hub sends <code>user.tool_confirmation</code> for Allow/Deny, or <code>user.custom_tool_result</code> for a supplied result. These are separate event types. Follow subsequent events to see what happens next.</p>
+            <CodeExample Snippet="Snippets.ChooseAction" />
+            <CodeExample Snippet="Snippets.ConfirmTool" />
+            <CodeExample Snippet="Snippets.CustomResult" />
+        </article>
+        <article class="learning-card"><h3>Interrupt and inspect</h3>
+            <p><strong>Interrupt work</strong> calls <code>InterruptAsync</code>, which sends <code>user.interrupt</code>. Its completion is not proof the remote work stopped. <strong>Inspect session</strong> calls <code>Sessions.Retrieve</code> through the hub. Confirm idle or terminated state; navigating between pages only disconnects the page's view.</p>
+            <CodeExample Snippet="Snippets.Interrupt" />
+            <CodeExample Snippet="Snippets.Retrieve" />
+        </article>
+    </div>
+    <p class="learning-outcome"><strong>Explain it back:</strong> which two connections carry events (provider stream and Blazor's SignalR circuit), why must the provider stream open before history is read, and which component decides how to respond to a pending action?</p>
+</section>
+<StudentNav Footer />

@@ -1,0 +1,104 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1560" height="1880" viewBox="0 0 1560 1880" role="img" aria-labelledby="title description">
+<title id="title">C01 (C# / Blazor) — Create a session and follow its first turn</title>
+<desc id="description">UML sequence diagram with six participants: student, browser, the Home.razor component in the Blazor circuit, the SessionHub service, the Anthropic C# SDK, and Managed Agents. Twenty-five numbered messages show session creation, opening the provider stream before listing history, subscribing the component to the in-memory feed, sending a prompt, and rendering the result over SignalR. The architecture page provides the full text equivalent.</desc>
+<defs>
+<marker id="request" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M0 0 L12 6 L0 12 Z" fill="#193269"/></marker>
+<marker id="response" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto"><path d="M1 1 L11 6 L1 11" fill="none" stroke="#193269" stroke-width="2"/></marker>
+</defs>
+<rect width="1560" height="1880" rx="26" fill="#fff"/>
+<rect x="1" y="1" width="1558" height="1878" rx="26" fill="none" stroke="#d7e7f5" stroke-width="2"/>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#090d3b}</style>
+<text x="34" y="49" font-size="26" font-weight="700" fill="#0872d4" style="fill:#0872d4">LESSON C01 (C#) / UML SEQUENCE DIAGRAM</text>
+<text x="34" y="104" font-size="43" font-weight="700" fill="#090d3b" style="fill:#090d3b">Create a session. Observe its first turn.</text>
+<text x="34" y="148" font-size="28" font-weight="400" fill="#193269" style="fill:#193269">Blazor Server application path • read from top to bottom</text>
+<rect x="537" y="176" width="746" height="43" rx="9" fill="#f1eaff" stroke="#d7e7f5" stroke-width="2"/>
+<text x="550" y="207" font-size="24" font-weight="700" fill="#6534a2" style="fill:#6534a2">Host process: ASP.NET Core + Blazor Server + Anthropic SDK</text>
+<rect x="17" y="232" width="226" height="94" rx="16" fill="#edf7ff" stroke="#d7e7f5" stroke-width="2"/>
+<rect x="17" y="232" width="226" height="7" rx="3" fill="#087dfa"/>
+<text x="30" y="273" font-size="25" font-weight="700" fill="#090d3b" style="fill:#090d3b">Student</text>
+<text x="30" y="310" font-size="24" font-weight="400" fill="#193269" style="fill:#193269">Browser user</text>
+<line x1="130" y1="326" x2="130" y2="1690" stroke="#97aac1" stroke-width="2" stroke-dasharray="7 7"/>
+<rect x="277" y="232" width="226" height="94" rx="16" fill="#edf7ff" stroke="#d7e7f5" stroke-width="2"/>
+<rect x="277" y="232" width="226" height="7" rx="3" fill="#087dfa"/>
+<text x="290" y="273" font-size="25" font-weight="700" fill="#090d3b" style="fill:#090d3b">Browser</text>
+<text x="290" y="310" font-size="24" font-weight="400" fill="#193269" style="fill:#193269">blazor.web.js</text>
+<line x1="390" y1="326" x2="390" y2="1690" stroke="#97aac1" stroke-width="2" stroke-dasharray="7 7"/>
+<rect x="537" y="232" width="226" height="94" rx="16" fill="#f3edff" stroke="#d7e7f5" stroke-width="2"/>
+<rect x="537" y="232" width="226" height="7" rx="3" fill="#853df2"/>
+<text x="550" y="273" font-size="25" font-weight="700" fill="#090d3b" style="fill:#090d3b">Home.razor</text>
+<text x="550" y="310" font-size="24" font-weight="400" fill="#193269" style="fill:#193269">Blazor circuit</text>
+<line x1="650" y1="326" x2="650" y2="1690" stroke="#97aac1" stroke-width="2" stroke-dasharray="7 7"/>
+<rect x="797" y="232" width="226" height="94" rx="16" fill="#f3edff" stroke="#d7e7f5" stroke-width="2"/>
+<rect x="797" y="232" width="226" height="7" rx="3" fill="#853df2"/>
+<text x="810" y="273" font-size="25" font-weight="700" fill="#090d3b" style="fill:#090d3b">SessionHub</text>
+<text x="810" y="310" font-size="24" font-weight="400" fill="#193269" style="fill:#193269">Host service</text>
+<line x1="910" y1="326" x2="910" y2="1690" stroke="#97aac1" stroke-width="2" stroke-dasharray="7 7"/>
+<rect x="1057" y="232" width="226" height="94" rx="16" fill="#f3edff" stroke="#d7e7f5" stroke-width="2"/>
+<rect x="1057" y="232" width="226" height="7" rx="3" fill="#853df2"/>
+<text x="1070" y="273" font-size="25" font-weight="700" fill="#090d3b" style="fill:#090d3b">Anthropic SDK</text>
+<text x="1070" y="310" font-size="24" font-weight="400" fill="#193269" style="fill:#193269">AnthropicClient</text>
+<line x1="1170" y1="326" x2="1170" y2="1690" stroke="#97aac1" stroke-width="2" stroke-dasharray="7 7"/>
+<rect x="1317" y="232" width="226" height="94" rx="16" fill="#eaf8f1" stroke="#d7e7f5" stroke-width="2"/>
+<rect x="1317" y="232" width="226" height="7" rx="3" fill="#00865d"/>
+<text x="1330" y="273" font-size="25" font-weight="700" fill="#090d3b" style="fill:#090d3b">Managed Agents</text>
+<text x="1330" y="310" font-size="24" font-weight="400" fill="#193269" style="fill:#193269">Remote session</text>
+<line x1="1430" y1="326" x2="1430" y2="1690" stroke="#97aac1" stroke-width="2" stroke-dasharray="7 7"/>
+<line x1="130" y1="381" x2="390" y2="381" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="140" y="370" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">1. New session</text>
+<line x1="390" y1="434" x2="650" y2="434" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="400" y="423" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">2. Click (SignalR)</text>
+<line x1="650" y1="487" x2="910" y2="487" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="660" y="476" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">3. CreateSessionAsync</text>
+<line x1="910" y1="540" x2="1170" y2="540" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="920" y="529" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">4. Sessions.Create</text>
+<line x1="1170" y1="593" x2="1430" y2="593" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="1180" y="582" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">5. Create request</text>
+<line x1="1430" y1="646" x2="1170" y2="646" stroke="#193269" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#response)"/>
+<text x="1180" y="635" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">6. Session + ID</text>
+<line x1="1170" y1="699" x2="910" y2="699" stroke="#193269" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#response)"/>
+<text x="920" y="688" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">7. Created session</text>
+<path d="M 910 735 h 43 v 22 h -43" fill="none" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="964" y="751" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">8. AttachAsync(id)</text>
+<line x1="910" y1="805" x2="1170" y2="805" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="920" y="794" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">9. StreamStreaming</text>
+<line x1="1170" y1="858" x2="1430" y2="858" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="1180" y="847" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">10. Open live stream</text>
+<line x1="910" y1="911" x2="1170" y2="911" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="920" y="900" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">11. Events.List</text>
+<line x1="1430" y1="964" x2="910" y2="964" stroke="#193269" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#response)"/>
+<text x="920" y="953" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">12. History via SDK</text>
+<line x1="910" y1="1017" x2="650" y2="1017" stroke="#193269" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#response)"/>
+<text x="660" y="1006" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">13. Session ID</text>
+<line x1="650" y1="1070" x2="910" y2="1070" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="660" y="1059" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">14. Subscribe</text>
+<line x1="910" y1="1123" x2="650" y2="1123" stroke="#193269" stroke-width="2.5" marker-end="url(#response)"/>
+<text x="660" y="1112" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">15. Buffered events</text>
+<line x1="650" y1="1176" x2="390" y2="1176" stroke="#193269" stroke-width="2.5" marker-end="url(#response)"/>
+<text x="400" y="1165" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">16. UI diff (SignalR)</text>
+<line x1="130" y1="1229" x2="390" y2="1229" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="140" y="1218" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">17. Send message</text>
+<line x1="390" y1="1282" x2="650" y2="1282" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="400" y="1271" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">18. Submit (SignalR)</text>
+<line x1="650" y1="1335" x2="910" y2="1335" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="660" y="1324" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">19. SendMessageAsync</text>
+<line x1="910" y1="1388" x2="1170" y2="1388" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="920" y="1377" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">20. Events.Send</text>
+<line x1="1170" y1="1441" x2="1430" y2="1441" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="1180" y="1430" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">21. user.message</text>
+<line x1="1430" y1="1494" x2="910" y2="1494" stroke="#193269" stroke-width="2.5" marker-end="url(#response)"/>
+<text x="920" y="1483" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">22. Agent + status events via SDK</text>
+<line x1="910" y1="1547" x2="650" y2="1547" stroke="#193269" stroke-width="2.5" marker-end="url(#response)"/>
+<text x="660" y="1536" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">23. OnEvent → InvokeAsync</text>
+<line x1="650" y1="1600" x2="390" y2="1600" stroke="#193269" stroke-width="2.5" marker-end="url(#response)"/>
+<text x="400" y="1589" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">24. UI diff (SignalR)</text>
+<line x1="390" y1="1653" x2="130" y2="1653" stroke="#193269" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#response)"/>
+<text x="140" y="1642" font-size="21" font-weight="400" fill="#193269" style="fill:#193269">25. Answer + state</text>
+<rect x="27" y="1712" width="1506" height="61" rx="12" fill="#eaf8f1" stroke="#d7e7f5" stroke-width="2"/>
+<text x="45" y="1752" font-size="26" font-weight="700" fill="#056b4b" style="fill:#056b4b">Create once → open stream before history → subscribe the page → send after observation is ready.</text>
+<line x1="44" y1="1826" x2="106" y2="1826" stroke="#193269" stroke-width="2.5" marker-end="url(#request)"/>
+<text x="120" y="1834" font-size="26" font-weight="400" fill="#193269" style="fill:#193269">Request</text>
+<line x1="325" y1="1826" x2="387" y2="1826" stroke="#193269" stroke-width="2.5" stroke-dasharray="9 7" marker-end="url(#response)"/>
+<text x="400" y="1834" font-size="26" font-weight="400" fill="#193269" style="fill:#193269">Returned data</text>
+<line x1="678" y1="1826" x2="740" y2="1826" stroke="#193269" stroke-width="2.5" marker-end="url(#response)"/>
+<text x="754" y="1834" font-size="26" font-weight="400" fill="#193269" style="fill:#193269">Event notification</text>
+</svg>

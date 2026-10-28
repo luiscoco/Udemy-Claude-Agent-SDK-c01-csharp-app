@@ -1,0 +1,24 @@
+/* Blazor's built-in error banner, styled to match the lab theme. */
+#blazor-error-ui {
+  display: none;
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 1000;
+  padding: 0.75rem 1.25rem;
+  background: #fff4f2;
+  color: #8a1c0b;
+  border-top: 2px solid #e0533d;
+  box-shadow: 0 -2px 8px rgb(0 0 0 / 0.15);
+}
+
+#blazor-error-ui .reload {
+  margin-left: 0.5rem;
+  color: inherit;
+  font-weight: 700;
+}
+
+#blazor-error-ui .dismiss {
+  position: absolute;
+  right: 1rem;
+  cursor: pointer;
+}

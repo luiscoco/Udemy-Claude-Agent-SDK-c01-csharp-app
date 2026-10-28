@@ -1,0 +1,338 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@implements IDisposable
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@using SessionLab.Services
+@inject SessionHub Hub
+@inject IJSRuntime JS
+
+<PageTitle>Managed Agents · Session Lab</PageTitle>
+
+<PageHeader Eyebrow="CLAUDE MANAGED AGENTS / LAB 01" Title="Give an agent a task." Accent="See what happens."
+            Intro="Create a session, follow its events, and stay in control of remote work.">
+    <section class="lesson-flow" aria-label="Session workflow">
+        <div><b>01</b><span><strong>Create</strong><small>Start a session</small></span></div><i>→</i>
+        <div><b>02</b><span><strong>Observe</strong><small>Follow live events</small></span></div><i>→</i>
+        <div><b>03</b><span><strong>Respond</strong><small>Stay in control</small></span></div>
+    </section>
+</PageHeader>
+
+@if (notice is not null)
+{
+    <div id="notice" class="notice @(noticeIsError ? "error" : "")">@notice</div>
+}
+<div class="layout" id="session-lab" tabindex="-1">
+    <section class="workspace">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">01 / SESSION</p>
+                <h2>Start a conversation</h2>
+            </div>
+            <span id="status" class="pill">@status</span>
+        </div>
+        <div class="session-bar">
+            <button id="create" disabled="@creating" @onclick="CreateAsync">＋ New session</button><input
+                id="sessionId" aria-label="Existing session ID" placeholder="Or enter an existing session ID"
+                @bind="sessionIdInput" /><button id="connect" class="secondary" @onclick="() => ConnectAsync(sessionIdInput)">Connect</button>
+        </div>
+        <p class="hint">New sessions use your configured agent and environment with a 50¢ list-cost budget.</p>
+        <div id="feed" class="feed" @ref="feedElement">
+            @if (items.Count == 0)
+            {
+                <div class="empty">
+                    <div class="empty-icon">✦</div>
+                    <h3>Ready when you are</h3>
+                    <p>Create or connect to a session to see its activity here.</p>
+                </div>
+            }
+            @foreach (var item in items)
+            {
+                <article class="event" @key="item">
+                    <div class="event-top"><strong>@item.Type</strong><span>@item.Id</span></div>
+                    @if (item.Text is not null)
+                    {
+                        <p>@item.Text</p>
+                    }
+                    else
+                    {
+                        <details>
+                            <summary>View event details</summary>
+                            <pre>@item.Json</pre>
+                        </details>
+                    }
+                </article>
+            }
+        </div>
+        <form id="messageForm" @onsubmit="SendAsync" @onsubmit:preventDefault>
+            <label for="message">YOUR MESSAGE</label><textarea id="message" rows="3" disabled="@(!enabled)"
+                placeholder="What would you like your agent to do?" @bind="message"></textarea>
+            <div class="form-footer">
+                <span>Messages are sent after the live stream opens.</span><button id="send" disabled="@(!enabled || sending)">Send message ↗</button>
+            </div>
+        </form>
+    </section>
+    <aside>
+        <section class="card">
+            <p class="eyebrow">02 / SESSION STATUS</p>
+            <h2>Keep track</h2>
+            <div class="metric"><span>Session ID</span><strong id="currentId">@(currentId ?? "—")</strong></div>
+            <div class="metric"><span>Stop reason</span><strong id="reason">@reason</strong></div>
+            <p id="reasonHelp" class="hint">@reasonHelp</p>
+            <div class="actions">
+                <button id="refresh" class="secondary" disabled="@(!enabled)" @onclick="InspectAsync">Inspect session</button><button
+                    id="interrupt" class="danger" disabled="@(!enabled)" @onclick="InterruptAsync">Interrupt work</button>
+            </div>
+            <p class="hint">Interrupt requests a stop; inspect the session to confirm it is idle.</p>
+        </section>
+        <section class="card" id="actionCard">
+            <p class="eyebrow">03 / PENDING ACTION</p>
+            <h2>Human in the loop</h2>
+            <p class="hint">
+                When the session requires action, inspect the matching event in the activity feed. For a tool
+                approval, choose Allow or Deny. For a custom tool request, enter its result and choose Send result.
+                See the README for a guided example.
+            </p>
+            <label for="eventId">EVENT ID</label><input id="eventId" placeholder="Event ID" disabled="@(!enabled)"
+                @bind="eventId" /><label for="toolResult">CUSTOM TOOL RESULT</label><textarea id="toolResult" rows="2"
+                placeholder="Optional result text" disabled="@(!enabled)" @bind="toolResult"></textarea>
+            <div class="action-buttons">
+                <button class="secondary action" disabled="@(!enabled)" @onclick='() => ActionAsync("allow")'>Allow</button><button
+                    class="secondary action" disabled="@(!enabled)" @onclick='() => ActionAsync("deny")'>Deny</button><button
+                    class="secondary action" disabled="@(!enabled)" @onclick='() => ActionAsync("custom")'>Send result</button>
+            </div>
+        </section>
+        <div class="footnote">✳ &nbsp; Agent claims are a starting point. Inspect the resulting artifact and remote session state.</div>
+    </aside>
+</div>
+
+@code {
+    static readonly Regex SessionIdPattern = new("^sesn_[A-Za-z0-9_-]+$");
+    static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
+    sealed record FeedItem(string Type, string? Id, string? Text, string Json);
+
+    readonly List<FeedItem> items = [];
+    SessionFeed? feed;
+    ElementReference feedElement;
+    bool scrollPending;
+
+    string? currentId, sessionIdInput, message, eventId, toolResult, notice;
+    bool noticeIsError, enabled, creating, sending;
+    string status = "Not connected", reason = "—";
+    string reasonHelp = "The session state will appear here as events arrive.";
+
+    void Notice(string text, bool error = false) => (notice, noticeIsError) = (text, error);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Returning from the guide restores the ID without sending a prompt or
+            // reconnecting automatically. The student explicitly chooses Connect.
+            var previousSession = await JS.InvokeAsync<string?>("sessionLab.getLastSession");
+            if (previousSession is not null && SessionIdPattern.IsMatch(previousSession))
+            {
+                sessionIdInput = previousSession;
+                Notice("Your previous session ID is ready. Click Connect to view its events again.");
+            }
+            if (!Hub.IsConfigured)
+                Notice("Add your Anthropic API key, agent ID, and environment ID with dotnet user-secrets, then restart the server.", true);
+            StateHasChanged();
+        }
+        if (scrollPending)
+        {
+            scrollPending = false;
+            await JS.InvokeVoidAsync("sessionLab.scrollToBottom", feedElement);
+        }
+    }
+
+    async Task CreateAsync()
+    {
+        creating = true;
+        try
+        {
+            var sessionId = await Hub.CreateSessionAsync();
+            await ConnectAsync(sessionId);
+            Notice("Session created. Send a message to start work.");
+        }
+        catch (SessionAttachException e)
+        {
+            Notice(e.Message, true);
+            sessionIdInput = e.SessionId;
+        }
+        catch (Exception e)
+        {
+            Notice(e.Message, true);
+        }
+        finally
+        {
+            creating = false;
+        }
+    }
+
+    async Task ConnectAsync(string? sessionId)
+    {
+        sessionId = sessionId?.Trim() ?? "";
+        if (!SessionIdPattern.IsMatch(sessionId))
+        {
+            Notice("Enter a valid session ID beginning with sesn_.", true);
+            return;
+        }
+        feed?.Unsubscribe(OnEvent);
+        feed = null;
+        items.Clear();
+        (currentId, sessionIdInput, eventId, toolResult) = (sessionId, sessionId, "", "");
+        (status, reason, enabled) = ("Connecting", "—", false);
+        await JS.InvokeVoidAsync("sessionLab.setLastSession", sessionId);
+        StateHasChanged();
+        try
+        {
+            feed = await Hub.AttachAsync(sessionId);
+            // Replay what the host already holds, then receive new events as they arrive.
+            foreach (var evt in feed.Subscribe(OnEvent)) ShowEvent(evt);
+            if (status == "Connecting") status = "Connected";
+            enabled = status != "Disconnected";
+        }
+        catch (Exception e)
+        {
+            status = "Not connected";
+            Notice(e.Message, true);
+        }
+    }
+
+    // Called on the SDK stream's background task; marshal onto the component's renderer.
+    void OnEvent(JsonElement evt) => _ = InvokeAsync(() =>
+    {
+        ShowEvent(evt);
+        StateHasChanged();
+    });
+
+    void ShowEvent(JsonElement evt)
+    {
+        var type = Str(evt, "type") ?? "event";
+        string? text = null;
+        if (type is "agent.message" or "user.message")
+            text = string.Join("\n", Array(evt, "content").Select(x => Str(x, "text") ?? x.GetRawText()));
+        items.Add(new(type, SessionFeed.EventId(evt), text, JsonSerializer.Serialize(evt, Indented)));
+        scrollPending = true;
+
+        if (type == "session.status_idle")
+        {
+            var stopReason = evt.TryGetProperty("stop_reason", out var sr) ? sr : default;
+            reason = (stopReason.ValueKind == JsonValueKind.Object ? Str(stopReason, "type") : null) ?? "unknown";
+            status = "Idle";
+            reasonHelp = reason switch
+            {
+                "end_turn" => "The turn ended. Verify any claimed result before relying on it.",
+                "requires_action" => "The agent is waiting for tool results or confirmation. Inspect the relevant events and respond below.",
+                "budget_reached" => "The session reached its budget and is paused.",
+                _ => "Inspect the event for details.",
+            };
+            if (stopReason.ValueKind == JsonValueKind.Object && Array(stopReason, "event_ids").FirstOrDefault() is { ValueKind: JsonValueKind.String } first)
+                eventId = first.GetString();
+        }
+        else if (type == "session.status_running")
+            (status, reason) = ("Running", "—");
+        else if (type == "session.status_terminated")
+            status = "Terminated";
+        else if (type is "session.error" or "app.stream_error")
+            Notice(Str(evt, "message") ?? (evt.TryGetProperty("error", out var error) ? error.GetRawText() : evt.GetRawText()), true);
+
+        if (type is "app.stream_closed" or "app.stream_error")
+        {
+            (status, enabled) = ("Disconnected", false);
+            if (type == "app.stream_closed") Notice(Str(evt, "message")!);
+        }
+    }
+
+    async Task SendAsync()
+    {
+        var text = message?.Trim();
+        if (string.IsNullOrEmpty(text) || currentId is null) return;
+        if (text.Length > 20000)
+        {
+            Notice("Enter a message of up to 20,000 characters.", true);
+            return;
+        }
+        sending = true;
+        try
+        {
+            await Hub.SendMessageAsync(currentId, text);
+            message = "";
+        }
+        catch (Exception e)
+        {
+            Notice(e.Message, true);
+        }
+        finally
+        {
+            sending = false;
+        }
+    }
+
+    async Task InterruptAsync()
+    {
+        try
+        {
+            await Hub.InterruptAsync(currentId!);
+            Notice("Interrupt sent. Wait for an idle event or inspect the session to confirm it stopped.");
+        }
+        catch (Exception e)
+        {
+            Notice(e.Message, true);
+        }
+    }
+
+    async Task InspectAsync()
+    {
+        try
+        {
+            var session = await Hub.RetrieveAsync(currentId!);
+            ShowEvent(JsonSerializer.SerializeToElement(new { type = "app.session_snapshot", session }));
+            Notice("Session snapshot added to the activity feed.");
+        }
+        catch (Exception e)
+        {
+            Notice(e.Message, true);
+        }
+    }
+
+    async Task ActionAsync(string result)
+    {
+        var id = eventId?.Trim();
+        if (string.IsNullOrEmpty(id))
+        {
+            Notice("Provide an event ID and action.", true);
+            return;
+        }
+        try
+        {
+            if (result == "custom")
+            {
+                if (string.IsNullOrWhiteSpace(toolResult))
+                {
+                    Notice("Enter the custom tool result.", true);
+                    return;
+                }
+                await Hub.SendCustomToolResultAsync(currentId!, id, toolResult);
+            }
+            else
+                await Hub.ConfirmToolAsync(currentId!, id, allow: result == "allow");
+            Notice("Response sent to the session.");
+        }
+        catch (Exception e)
+        {
+            Notice(e.Message, true);
+        }
+    }
+
+    static string? Str(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    static IEnumerable<JsonElement> Array(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Array ? value.EnumerateArray() : [];
+
+    // Leaving the page only stops this view; the remote session keeps running.
+    public void Dispose() => feed?.Unsubscribe(OnEvent);
+}

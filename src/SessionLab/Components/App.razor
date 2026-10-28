@@ -1,0 +1,26 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["style.css"]" />
+    <link rel="stylesheet" href="@Assets["code-highlighting.css"]" />
+    <link rel="stylesheet" href="@Assets["blazor.css"]" />
+    <ImportMap />
+    <HeadOutlet />
+</head>
+
+@* Full page loads between the lab, guide, and architecture pages, like the original app. *@
+<body data-enhance-nav="false">
+    <Routes />
+    <ReconnectModal />
+    <script src="@Assets["js/navigation.js"]"></script>
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script defer src="@Assets["js/prism.js"]"></script>
+    <script defer src="@Assets["js/code-highlighting.js"]"></script>
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+@* A source excerpt with its explanation. Razor HTML-encodes Code, so generics and markup display as text. *@
+<figure class="code-example">
+    <figcaption>@Snippet.File · @Snippet.Caption · source excerpt</figcaption>
+    <pre><code class="language-@Snippet.Language">@Snippet.Code</code></pre>
+    <p class="code-explanation">@Snippet.Explanation</p>
+</figure>
+
+@code {
+    [Parameter, EditorRequired] public Snippet Snippet { get; set; } = default!;
+}
